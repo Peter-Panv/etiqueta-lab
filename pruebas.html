@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Verificación del temario · EtiquetaLab</title>
+<script>window.COURSE=[];</script><script src="basico.js"></script><script src="avanzado.js"></script><script src="motor.js"></script></head>
+<body><main><h1>Verificación del temario</h1><p>Comprueba cada plantilla inicial y su solución con el mismo motor que usa el curso.</p><output aria-live="polite">Comprobando…</output><ul id="problemas"></ul></main>
+<script>
+(async () => {
+  const fallos = [];
+  let criterios = 0;
+  const lecciones = COURSE.flatMap(modulo => modulo.lessons);
+  for (const leccion of lecciones) {
+    for (const version of ['starter', 'solution']) {
+      const codigo = leccion[version];
+      const doc = new DOMParser().parseFromString(codigo, 'text/html');
+      const live = leccion.probe ? await EtiquetaMotor.behaviorTest(leccion, codigo) : undefined;
+      const resultados = leccion.checks.map(criterio => {
+        criterios++;
+        try { return Boolean(criterio.test(doc, codigo, live)); }
+        catch (e) { fallos.push(leccion.id + ' · ' + criterio.label + ' · ' + e.message); return false; }
+      });
+      if (version === 'starter' && resultados.every(Boolean)) fallos.push(leccion.id + ' · La plantilla ya resuelve el reto.');
+      if (version === 'solution') resultados.forEach((ok, i) => { if (!ok) fallos.push(leccion.id + ' · ' + leccion.checks[i].label); });
+    }
+  }
+  document.querySelector('output').textContent = lecciones.length + ' lecciones · ' + criterios + ' comprobaciones · ' + fallos.length + ' fallos';
+  for (const texto of fallos) { const li=document.createElement('li'); li.textContent=texto; document.querySelector('#problemas').append(li); }
+})().catch(error=>{document.querySelector('output').textContent='Error de verificación. '+error.message;});
+</script></body></html>
