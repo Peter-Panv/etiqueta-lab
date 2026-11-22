@@ -24,4 +24,50 @@
   document.querySelector('output').textContent = lecciones.length + ' lecciones · ' + criterios + ' comprobaciones · ' + fallos.length + ' fallos';
   for (const texto of fallos) { const li=document.createElement('li'); li.textContent=texto; document.querySelector('#problemas').append(li); }
 })().catch(error=>{document.querySelector('output').textContent='Error de verificación. '+error.message;});
+</script>
+<script src="referencia.js"></script><script src="etiquetas-lab.js"></script>
+<script src="integraciones-lab.js"></script><script src="biblioteca-lab.js"></script>
+<section><h2>Biblioteca del laboratorio</h2><p id="lib-test" role="status">Comprobando fichas…</p></section>
+<script>
+(() => {
+  const cards=[...LAB_TAGS,...LAB_EXTRAS], errors=[];
+  const check=(value,message)=>{if(!value)errors.push(message);};
+  const fixture=document.createElement('div');
+  fixture.hidden=true;document.body.append(fixture);
+  try {
+    const ids=new Set();
+    for(const card of cards){
+      const key=card.family+'|'+card.term;
+      check(!ids.has(key),'Identificador repetido '+key);ids.add(key);
+      check((card.pattern.match(/⟦[^⟦⟧]+⟧/g)||[]).length===1,'Hueco incorrecto '+key);
+      check(card.task&&card.hint&&card.description&&card.source.startsWith('https://'),'Ficha incompleta '+key);
+    }
+    const saved=new Map(),initial='<p>Mi página de prueba con tildes.</p>';
+    const g=id=>fixture.querySelector('#'+id);
+    fixture.innerHTML=BibliotecaLab.layout('<textarea id="work"></textarea><p id="lab-status"></p>',()=>'');
+    const area=g('work');area.value=initial;
+    const save=(k,v)=>saved.set(k,v),read=(k,v)=>saved.has(k)?saved.get(k):v;
+    area.oninput=()=>save(area.dataset.draftKey||'etiquetalab:lab',area.value);
+    BibliotecaLab.mount({root:fixture,area,run:()=>{},read,save,initial,icon:()=>''});
+    check(g('lib-list').querySelectorAll('button').length===cards.length,'Listado incompleto');
+    g('lib-family').value='Bootstrap';g('lib-family').dispatchEvent(new Event('change'));
+    g('lib-q').value='btn-primary';g('lib-q').dispatchEvent(new Event('input'));
+    check(g('lib-list').querySelectorAll('button').length===1,'Filtro por familia y término');
+    g('lib-card').querySelector('[data-do="hint"]').click();
+    check(!g('lib-hint').hidden,'La pista sigue oculta');
+    g('lib-card').querySelector('[data-do="practice"]').click();
+    check(area.value.slice(area.selectionStart,area.selectionEnd)==='____','Hueco sin seleccionar');
+    check(area.value.includes('bootstrap.min.css'),'Falta Bootstrap');
+    area.setRangeText('btn-primary',area.selectionStart,area.selectionEnd,'end');area.dispatchEvent(new Event('input'));
+    const practice=area.value;
+    g('lab-return').click();check(area.value===initial,'Se modificó el borrador libre');
+    g('lib-card').querySelector('[data-do="practice"]').click();check(area.value===practice,'Se perdió la práctica guardada');
+    g('lib-q').value='zzzzinexistente';g('lib-q').dispatchEvent(new Event('input'));
+    check(g('lib-list').childElementCount===0,'Búsqueda vacía incorrecta');
+    g('lib-card').querySelector('[data-do="clear"]').click();check(g('lib-list').childElementCount===cards.length,'Fallo al limpiar filtros');
+    const exported=BibliotecaLab.exportPractice('<img alt="Paisaje" src="assets/paisaje.svg">');
+    check(exported.includes('charset="utf-8"')&&exported.includes(new URL('assets/paisaje.svg',location.href).href),'La descarga pierde metadatos o recursos');
+  } catch(e){errors.push(e.message);} finally {fixture.remove();}
+  document.getElementById('lib-test').textContent=cards.length+' fichas · '+errors.length+' fallos'+(errors.length?' · '+errors.join(' / '):'');
+})();
 </script></body></html>

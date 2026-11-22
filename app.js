@@ -85,7 +85,8 @@
   }
   const labInitial='<!doctype html>\n<html lang="es">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <title>Mi laboratorio</title>\n  <style>\n    body { font-family: system-ui; padding: 1rem; }\n    h1 { color: seagreen; }\n  </style>\n</head>\n<body>\n  <h1>¡Hola, mundo!</h1>\n  <p>Esta es mi primera página.</p>\n</body>\n</html>';
   function laboratory(){
-    return head('PRÁCTICA LIBRE','Laboratorio de código','Escribe HTML, añade estilos con <style> o prueba JavaScript con <script>. La vista previa se actualiza al escribir.')+'<div class="lab-grid">'+editor(read('etiquetalab:lab',labInitial))+preview()+'</div><div class="editor-actions"><button class="btn dark" id="run">'+icon('play')+' Ejecutar de nuevo</button><button class="btn" id="download">'+icon('download')+' Descargar HTML</button></div><p class="status-msg" id="lab-status" role="status">Tu borrador se guarda en este navegador.</p>';
+    const workspace='<div class="lab-grid">'+editor(read('etiquetalab:lab',labInitial))+preview()+'</div><div class="editor-actions"><button class="btn dark" id="run">'+icon('play')+' Ejecutar de nuevo</button><button class="btn" id="download">'+icon('download')+' Descargar HTML</button></div><p class="status-msg" id="lab-status" role="status">Tu borrador se guarda en este navegador.</p>';
+    return head('PRÁCTICA LIBRE','Laboratorio de código','Busca una etiqueta o una clase, completa la parte que falta y prueba el resultado en la vista previa.')+window.BibliotecaLab.layout(workspace,icon);
   }
   const normalize=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
   function refItems(q='',cat='Todas'){
@@ -105,9 +106,25 @@
     const area=document.getElementById('editor'),frame=document.getElementById('vista');
     let timer;
     const run=()=>{if(frame.isConnected)frame.srcdoc=previewDocument(area.value);};
-    area.addEventListener('input',()=>{save(key,area.value);clearTimeout(timer);timer=setTimeout(run,300);if(storageFailed&&document.querySelector('#lab-status'))document.querySelector('#lab-status').textContent='El almacenamiento está lleno o desactivado. Descarga el HTML para conservarlo.';});
+    area.addEventListener('input',()=>{save(area.dataset.draftKey||key,area.value);clearTimeout(timer);timer=setTimeout(run,300);if(storageFailed&&document.querySelector('#lab-status'))document.querySelector('#lab-status').textContent='El almacenamiento está lleno o desactivado. Descarga el HTML para conservarlo.';});
     run();
     return {area,run};
+  }
+  function wireLaboratory() {
+    const {area,run}=activeEditor('etiquetalab:lab');
+    window.BibliotecaLab.mount({root:host,area,run,read,save,initial:labInitial,icon});
+    document.getElementById('run').onclick=()=>{
+      run();
+      document.getElementById('lab-status').textContent='Vista previa actualizada.';
+    };
+    document.getElementById('download').onclick=()=>{
+      const practice=area.dataset.draftKey?.startsWith('etiquetalab:lab:ficha:');
+      const code=practice?window.BibliotecaLab.exportPractice(area.value):area.value;
+      const url=URL.createObjectURL(new Blob([code],{type:'text/html;charset=utf-8'}));
+      const a=document.createElement('a');
+      a.href=url;a.download=practice?'mi-practica.html':'mi-pagina.html';a.click();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    };
   }
   function wireLesson(l,mode){
     const {area}=activeEditor(draftKey(l,mode));
@@ -140,7 +157,7 @@
     else if(view==='modulo')host.innerHTML=modulePage(m);
     else if(view==='ruta'){host.innerHTML=routePage();host.onclick=routeFilter;}
     else if(view==='referencia'){host.innerHTML=reference();let cat='Todas';const q=document.getElementById('query'),out=document.getElementById('refs');const refresh=()=>out.innerHTML=refItems(q.value,cat);q.oninput=refresh;host.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{cat=b.dataset.cat;host.querySelectorAll('[data-cat]').forEach(c=>{c.classList.toggle('active',c===b);c.setAttribute('aria-pressed',String(c===b));});refresh();});}
-    else if(view==='laboratorio'){host.innerHTML=laboratory();const {area,run}=activeEditor('etiquetalab:lab');document.getElementById('run').onclick=()=>{run();document.getElementById('lab-status').textContent='Vista previa actualizada.';};document.getElementById('download').onclick=()=>{const url=URL.createObjectURL(new Blob([area.value],{type:'text/html;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='mi-pagina.html';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};}
+    else if(view==='laboratorio'){host.innerHTML=laboratory();wireLaboratory();}
     else if(view==='progreso')host.innerHTML=progress();
     else host.innerHTML=home();
     if(view!=='ruta')host.onclick=null;
