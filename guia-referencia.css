@@ -26,3 +26,29 @@
 @media(max-width:700px){.ref-try{padding:15px}.ref-demo-grid{grid-template-columns:1fr}.ref-controls{grid-template-columns:1fr 1fr;gap:8px}.ref-demo-top label{min-width:100px}.ref-entry{padding:14px}}
 @media(max-width:460px){.ref-demo-top,.ref-controls{display:grid;grid-template-columns:1fr}.ref-demo-top{gap:9px}.ref-entry-actions .btn{padding-inline:8px}.ref-demo-grid .ref-code{min-height:auto}}
 
+.structure-panel{margin-bottom:24px;border-top:3px solid #619b72}
+.structure-panel h2{font-size:1.55rem}
+.structure-panel>p,.structure-panel h3+p{margin-top:7px;color:var(--muted)}
+.structure-panel>label{display:block;margin:14px 0 4px;color:#345243;font-size:.88rem;font-weight:650}
+.structure-panel>select{border:1px solid #bdcec2;border-radius:8px;background:#fff;color:#264235;padding:9px 11px;width:min(100%,330px)}
+#structure-heading{margin-top:19px;font-size:1.3rem;overflow-wrap:anywhere}
+.structure-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 27px;margin:15px 0 17px;padding-left:1.5rem}
+.structure-steps li{padding-left:3px}
+.structure-steps li::marker{font-weight:700;color:var(--green)}
+.structure-steps code{font-weight:660;color:#245841;overflow-wrap:anywhere}
+.structure-steps p{color:#45574c;font-size:.91rem;margin-top:3px}
+.structure-preview{background:#f5f8f4;border:1px solid #dce6da;border-radius:9px;overflow:hidden}
+.structure-preview-header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 15px;padding:9px 13px;color:#365844}
+.structure-sizes{display:flex;flex-wrap:wrap;gap:6px}
+.structure-sizes button[aria-pressed=true]{background:#e0f0e4;color:#23513a;border-color:#8caf9a}
+.structure-preview>p{padding:0 13px 10px;color:#536959;font-size:.9rem}
+.structure-frame-scroll{width:100%;min-width:0;overflow:auto;border-top:1px solid #dce6da;background:#edf2ed}
+.structure-frame-scroll .ref-frame{max-width:none}
+.structure-code{margin-top:13px}
+.structure-code summary{color:#28543b;font-weight:660}
+.structure-code pre{margin-top:8px;max-height:450px}
+.structure-related{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-top:15px}
+.structure-related span{font-size:.86rem;font-weight:650;color:#345243}
+.structure-related button{padding:4px 10px;font:.82rem var(--mono);overflow-wrap:anywhere}
+.ref-entry p.ref-context{background:#eef6ef;padding:8px 10px;border-left:3px solid #81ac8e}
+@media(max-width:650px){.structure-steps{grid-template-columns:1fr}.structure-panel{padding:15px}.structure-panel h2{font-size:1.36rem}}

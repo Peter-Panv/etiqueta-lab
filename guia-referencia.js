@@ -1,13 +1,14 @@
 (() => {
   'use strict';
   const {entries,topics,familyGroups}=window.REFERENCIA_GUIA;
+  const {structures,byStructure,documentFor}=window.GuiaEstructuras;
   const bsBase='https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/';
   const htmlEscape=text=>String(text).replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
   const normalize=text=>text.toLocaleLowerCase('es').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   const key=entry=>entry.family+'|'+entry.term;
   const entryIndex=new Map(entries.map(entry=>[key(entry),entry]));
   const searchIndex=new Map(entries.map(entry=>[
-    entry,normalize([entry.family,entry.term,entry.group,entry.description,entry.syntax,entry.options.flat().join(' ')].join(' '))
+    entry,normalize([entry.family,entry.term,entry.group,entry.description,entry.syntax,entry.options.flat().join(' '),entry.context,byStructure.get(entry.structure)?.title].join(' '))
   ]));
   const languages={...familyGroups, '':'Todos'};
   const order=['','HTML','CSS','Bootstrap','JavaScript','Java'];
@@ -42,6 +43,8 @@
     const entry=entryIndex.get(id);
     if(entry?.demo)return {id:'ref:'+id,term:entry.term,code:sample(entry)};
     const [kind,name,tech,value]=id.split('|');
+    const structure=byStructure.get(name);
+    if(kind==='estructura'&&structure)return {id:'ref:'+id,term:structure.title,code:documentFor(structure)};
     const topic=topics.find(t=>t.id===name);
     const i=Number(value);
     if(kind==='tema'&&topic&&['CSS','Bootstrap'].includes(tech)&&value!==''&&topic.choices[i]){
@@ -52,7 +55,11 @@
   const snippet=text=>'<pre class="ref-code"><code>'+htmlEscape(text)+'</code></pre>';
   const frame=title=>'<iframe class="ref-frame" title="'+htmlEscape(title)+'" sandbox="allow-scripts allow-forms" referrerpolicy="no-referrer"></iframe>';
   function layout(){
-    return '<section class="ref-try panel" aria-labelledby="ref-try-title"><div class="ref-demo-top"><div><h2 id="ref-try-title">Centrar, alinear y posicionar</h2><p>Elige una opción para ver qué código cambia y cómo se mueve el contenido.</p></div>'+
+    return '<section class="panel structure-panel" aria-labelledby="structure-title"><h2 id="structure-title">Cómo se arma desde cero</h2>'+
+      '<p>Elige una estructura y sigue el orden de sus piezas. Puedes probar el resultado aquí mismo.</p>'+
+      '<label for="structure-select">Estructura</label><select id="structure-select">'+structures.map(s=>'<option value="'+s.id+'">'+htmlEscape(s.label)+'</option>').join('')+'</select>'+
+      '<div id="structure-detail"></div></section>'+
+      '<section class="ref-try panel" aria-labelledby="ref-try-title"><div class="ref-demo-top"><div><h2 id="ref-try-title">Centrar, alinear y posicionar</h2><p>Elige una opción para ver qué código cambia y cómo se mueve el contenido.</p></div>'+
       '<label for="ref-engine">Tecnología<select id="ref-engine"><option>CSS</option><option>Bootstrap</option></select></label></div>'+
       '<div id="ref-topics" class="ref-topic-tabs">'+topics.map((t,i)=>'<button class="filter" aria-pressed="'+String(i===0)+'" type="button" data-topic="'+t.id+'">'+t.title+'</button>').join('')+'</div><div id="ref-topic"></div></section>'+
       '<section class="ref-catalog" aria-labelledby="catalog-title"><h2 id="catalog-title" class="block-title">Sintaxis y valores</h2>'+
@@ -67,11 +74,13 @@
     const note=entry.family==='Java'?'<p class="ref-note">Ejecuta el código con el JDK en una terminal o en tu IDE.</p>':'';
     const action=entry.demo?'<button type="button" class="btn small" data-demo="'+index+'" aria-expanded="false">Probar aquí</button>'+
         '<a class="btn small" href="'+labLink(key(entry))+'">Abrir en laboratorio</a>':'';
+    const context=entry.context?'<p class="ref-context"><strong>Dónde va.</strong> '+htmlEscape(entry.context)+'</p>':'';
+    const assembled=entry.structure?'<button type="button" class="btn dark small" data-structure="'+entry.structure+'">Ver cómo se arma</button>':'';
     return '<article class="panel ref-entry"><p class="ref-meta">'+htmlEscape(languages[entry.family])+' / '+htmlEscape(entry.group)+'</p>'+
       '<h3><code>'+htmlEscape(entry.term)+'</code></h3><p>'+htmlEscape(entry.description)+'</p>'+
-      snippet(entry.syntax)+'<details><summary>Opciones de uso <span>'+entry.options.length+'</span></summary><dl>'+
+      context+snippet(entry.syntax)+'<details><summary>Opciones de uso <span>'+entry.options.length+'</span></summary><dl>'+
       entry.options.map(([value,meaning])=>'<div><dt><code>'+htmlEscape(value)+'</code></dt><dd>'+htmlEscape(meaning)+'</dd></div>').join('')+
-      '</dl></details>'+note+'<div class="ref-entry-actions">'+action+'<a href="'+htmlEscape(entry.source)+'" target="_blank" rel="noopener">Documentación oficial</a></div>'+
+      '</dl></details>'+note+'<div class="ref-entry-actions">'+assembled+action+'<a href="'+htmlEscape(entry.source)+'" target="_blank" rel="noopener">Documentación oficial</a></div>'+
       (entry.demo?'<div class="ref-inline" hidden></div>':'')+'</article>';
   }
   function mount(root){
@@ -81,6 +90,43 @@
     const tabs=[...root.querySelectorAll('[data-family]')];
     let topic=topics[0],choice=1,active='',pageSize=16,limit=pageSize,matches=[];
     function setFrame(el, code){el.srcdoc=window.EtiquetaMotor.previewDocument(code);}
+    const structureChoice=get('structure-select');
+    const structureView=get('structure-detail');
+    function drawStructure(){
+      const structure=byStructure.get(structureChoice.value);
+      const code=documentFor(structure);
+      const controls=structure.width?'<div class="structure-sizes" aria-label="Ancho del ejemplo"><button type="button" class="btn small" data-width="narrow" aria-pressed="true">Estrecha</button><button type="button" class="btn small" data-width="wide" aria-pressed="false">Amplia · 608 px</button></div>':'';
+      structureView.innerHTML='<h3 id="structure-heading" tabindex="-1">'+htmlEscape(structure.title)+'</h3><p>'+htmlEscape(structure.intro)+'</p>'+
+        '<ol class="structure-steps">'+structure.steps.map(([part,explain])=>'<li><code>'+htmlEscape(part)+'</code><p>'+htmlEscape(explain)+'</p></li>').join('')+'</ol>'+
+        '<div class="structure-preview"><div class="structure-preview-header"><strong>Prueba el ejemplo</strong>'+controls+'</div>'+
+        '<p>'+htmlEscape(structure.checks)+'</p><div class="structure-frame-scroll">'+frame('Ejemplo de '+structure.title)+'</div></div>'+
+        '<details class="structure-code"><summary>Ver documento completo</summary>'+snippet(code)+'</details>'+
+        '<div class="ref-entry-actions"><a class="btn small" href="'+labLink('estructura|'+structure.id)+'">Editar en laboratorio</a>'+
+        '<a href="'+structure.source+'" target="_blank" rel="noopener">Documentación oficial</a></div>'+
+        '<div class="structure-related"><span>Fichas relacionadas</span>'+structure.related.map(id=>'<button type="button" class="filter" data-related="'+htmlEscape(id)+'">'+htmlEscape(entryIndex.get(id).term)+'</button>').join('')+'</div>';
+      const preview=structureView.querySelector('iframe');
+      preview.style.height=(structure.height||162)+'px';
+      if(structure.width)preview.style.width='min(100%, 320px)';
+      setFrame(preview,code);
+    }
+    structureChoice.onchange=drawStructure;
+    structureView.onclick=e=>{
+      const width=e.target.closest('[data-width]');
+      if(width){
+        const frameScroll=structureView.querySelector('.structure-frame-scroll');
+        const wide=width.dataset.width==='wide';
+        frameScroll.querySelector('iframe').style.width=wide?'608px':'min(100%, 320px)';
+        frameScroll.tabIndex=wide?0:-1;
+        if(!wide)frameScroll.scrollLeft=0;
+        for(const button of structureView.querySelectorAll('[data-width]'))button.setAttribute('aria-pressed',String(button===width));
+      }
+      const related=e.target.closest('[data-related]');
+      if(related){
+        const entry=entryIndex.get(related.dataset.related);
+        query.value=entry.term;setFamily(entry.family);
+        query.focus();
+      }
+    };
     function drawTopic(){
       const tech=engine.value;
       topicView.innerHTML='<p class="ref-topic-caption">'+htmlEscape(topic.description)+'</p>'+
@@ -140,6 +186,11 @@
       if(first){first.tabIndex=-1;first.focus();}
     };
     catalog.onclick=e=>{
+      const assembled=e.target.closest('[data-structure]');
+      if(assembled){
+        structureChoice.value=assembled.dataset.structure;
+        drawStructure();get('structure-heading').focus();return;
+      }
       const button=e.target.closest('[data-demo]');if(!button)return;
       const demo=button.closest('article').querySelector('.ref-inline');
       const open=demo.hidden;
@@ -153,7 +204,7 @@
     };
     tabs.forEach(button=>button.onclick=()=>setFamily(button.dataset.family));
     query.oninput=refresh;groups.onchange=refresh;
-    drawTopic();setFamily('');
+    drawStructure();drawTopic();setFamily('');
   }
   window.GuiaReferencia=Object.freeze({layout,mount,example});
 })();
