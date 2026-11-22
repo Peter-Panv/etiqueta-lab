@@ -38,7 +38,7 @@
       '<div class="lab-desk"><section class="lib-card" id="lib-card" aria-label="Ficha seleccionada"></section>'+
       '<div class="desk-mode"><span id="lab-current">Mi página</span><button type="button" id="lab-return" hidden>Volver a mi página</button></div>'+workspace+'</div></div>';
   }
-  function mount({root,area,run,read,save,initial,icon}) {
+  function mount({root,area,run,read,save,initial,icon,example,closeExample}) {
     const get = id => root.querySelector('#'+id);
     const panel=get('lib-browser'),query=get('lib-q'),family=get('lib-family'),group=get('lib-group'),list=get('lib-list'),detail=get('lib-card');
     const pageButton=get('lab-return'),status=get('lab-status');
@@ -80,13 +80,14 @@
     }
     function switchEditor(card, focus=false) {
       memory.set(area.dataset.draftKey||personal,area.value);
+      if(active===example&&example&&card!==example)closeExample();
       active=card;
       const key=card?keyFor(card):personal;
       area.dataset.draftKey=key;
-      const fallback=card?snippet(card,false):initial;
+      const fallback=card?.code??(card?snippet(card,false):initial);
       area.value=memory.has(key)?memory.get(key):read(key,fallback);
       memory.set(key,area.value);
-      get('lab-current').textContent=card?'Práctica · '+card.term:'Mi página';
+      get('lab-current').textContent=card?(card.code?'Referencia · ':'Práctica · ')+card.term:'Mi página';
       pageButton.hidden=!card;
       status.textContent=card?'Esta práctica tiene su propio borrador.':'Tu borrador se guarda en este navegador.';
       run();
@@ -125,7 +126,13 @@
       b.textContent=action==='hint'?(target.hidden?'Ver pista':'Ocultar pista'):(target.hidden?'Ver ejemplo resuelto':'Ocultar ejemplo');
     });
     topics(saved.group);drawList();
-    if(lookup.has(saved.active))switchEditor(lookup.get(saved.active));
+    if(example){
+      switchEditor(example);
+      detail.innerHTML='<div class="lib-card-title"><h2>'+esc(example.term)+'</h2></div>'+
+        '<p>Modifica el ejemplo y observa el resultado en la vista previa.</p>'+
+        '<div class="lib-actions"><a class="btn small" href="#referencia">Volver a Referencia</a></div>';
+    }
+    else if(lookup.has(saved.active))switchEditor(lookup.get(saved.active));
   }
   function exportPractice(code) {
     const doc=new DOMParser().parseFromString(code,'text/html');

@@ -88,14 +88,8 @@
     const workspace='<div class="lab-grid">'+editor(read('etiquetalab:lab',labInitial))+preview()+'</div><div class="editor-actions"><button class="btn dark" id="run">'+icon('play')+' Ejecutar de nuevo</button><button class="btn" id="download">'+icon('download')+' Descargar HTML</button></div><p class="status-msg" id="lab-status" role="status">Tu borrador se guarda en este navegador.</p>';
     return head('PRÁCTICA LIBRE','Laboratorio de código','Busca una etiqueta o una clase, completa la parte que falta y prueba el resultado en la vista previa.')+window.BibliotecaLab.layout(workspace,icon);
   }
-  const normalize=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
-  function refItems(q='',cat='Todas'){
-    const entries=window.REFERENCE.filter(r=>(cat==='Todas'||r[0]===cat)&&normalize(r.slice(0,4).join(' ')).includes(normalize(q)));
-    return entries.length?entries.map(([c,t,d,ex,slug])=>'<article class="panel ref-row"><span class="mod-num">'+esc(c)+'</span><h2><code>&lt;'+esc(t)+'&gt;</code></h2><p>'+esc(d)+'</p><pre>'+esc(ex)+'</pre><a href="https://developer.mozilla.org/es/docs/Web/HTML/Reference/Elements/'+(slug||t)+'" target="_blank" rel="noopener">Consultar en MDN '+icon('external')+'</a></article>').join(''):'<p class="solo">No hay coincidencias. Prueba con otra etiqueta o categoría.</p>';
-  }
   function reference(){
-    const cats=['Todas',...new Set(window.REFERENCE.map(r=>r[0]))];
-    return head('GUÍA DE CONSULTA','Referencia HTML',window.REFERENCE.length+' fichas con el uso y un ejemplo de cada elemento. Busca por etiqueta, función o categoría.')+'<label for="query" class="file-label">Buscar una etiqueta</label><br><input id="query" type="search" class="search" placeholder="Ej. form, imagen, encabezado"><div class="filters">'+cats.map((c,i)=>'<button class="filter '+(!i?'active':'')+'" aria-pressed="'+(!i)+'" data-cat="'+esc(c)+'">'+esc(c)+'</button>').join('')+'</div><div id="refs" class="ref-list">'+refItems()+'</div>';
+    return head('GUÍA DE CONSULTA','Referencia de desarrollo','Consulta la sintaxis de HTML, CSS, Bootstrap, JavaScript y Java. Cada ficha explica las opciones y cuándo usarlas.')+window.GuiaReferencia.layout();
   }
   function progress(){
     let pct=Math.round(done.size*100/lessons.length);
@@ -110,9 +104,16 @@
     run();
     return {area,run};
   }
-  function wireLaboratory() {
+  function wireLaboratory(referenceId) {
     const {area,run}=activeEditor('etiquetalab:lab');
-    window.BibliotecaLab.mount({root:host,area,run,read,save,initial:labInitial,icon});
+    let example=null;
+    if(referenceId){
+      try{example=window.GuiaReferencia.example(decodeURIComponent(referenceId));}catch{}
+    }
+    window.BibliotecaLab.mount({
+      root:host,area,run,read,save,initial:labInitial,icon,example,
+      closeExample:()=>history.replaceState(history.state,'','#laboratorio')
+    });
     document.getElementById('run').onclick=()=>{
       run();
       document.getElementById('lab-status').textContent='Vista previa actualizada.';
@@ -156,8 +157,8 @@
     if(view==='leccion'){last=l.id;update();const mode=step==='ejercicio'?'ejercicio':'ejemplo';host.innerHTML=lessonPage(l,mode);wireLesson(l,mode);}
     else if(view==='modulo')host.innerHTML=modulePage(m);
     else if(view==='ruta'){host.innerHTML=routePage();host.onclick=routeFilter;}
-    else if(view==='referencia'){host.innerHTML=reference();let cat='Todas';const q=document.getElementById('query'),out=document.getElementById('refs');const refresh=()=>out.innerHTML=refItems(q.value,cat);q.oninput=refresh;host.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{cat=b.dataset.cat;host.querySelectorAll('[data-cat]').forEach(c=>{c.classList.toggle('active',c===b);c.setAttribute('aria-pressed',String(c===b));});refresh();});}
-    else if(view==='laboratorio'){host.innerHTML=laboratory();wireLaboratory();}
+    else if(view==='referencia'){host.innerHTML=reference();window.GuiaReferencia.mount(host);}
+    else if(view==='laboratorio'){host.innerHTML=laboratory();wireLaboratory(id==='referencia'?step:null);}
     else if(view==='progreso')host.innerHTML=progress();
     else host.innerHTML=home();
     if(view!=='ruta')host.onclick=null;
